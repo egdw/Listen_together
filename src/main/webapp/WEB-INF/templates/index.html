@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>一起听歌-恶搞大王制作</title>
+    <title>同步听歌-恶搞大王制作</title>
     <meta name="viewport" content="initial-scale=1, maximum-scale=1">
     <link rel="shortcut icon" href="/favicon.ico">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,7 +22,7 @@
 <div id="div1" class="page-group">
     <div class="page page-current">
         <header class="bar bar-nav">
-            <h1 class="title">一起听歌-<em>恶搞大王制作</em></h1>
+            <h1 class="title">同步听歌-<em>恶搞大王制作</em></h1>
         </header>
         <div class="content">
             <div class="buttons-tab">
@@ -64,7 +64,7 @@
 <script>
 
     var curr_page = 1;
-
+    var ws = null;
     function changePage1() {
         if (curr_page > 1) {
             curr_page = curr_page - 1;
@@ -102,6 +102,7 @@
                     mode: 'random',
                     music: data
                 });
+                swal("Good!", "添加成功!", "success");
             },
             error: function (e) {
             }
@@ -156,12 +157,6 @@
                                 author: '七森中☆ごらく部',
                                 url: 'https://moeplayer.b0.upaiyun.com/aplayer/yuruyuri.mp3',
                                 pic: 'https://moeplayer.b0.upaiyun.com/aplayer/yuruyuri.jpg'
-                            },
-                            {
-                                title: 'あっちゅ～ま青春!',
-                                author: '七森中☆ごらく部',
-                                url: 'https://moeplayer.b0.upaiyun.com/aplayer/yuruyuri.mp3',
-                                pic: 'https://moeplayer.b0.upaiyun.com/aplayer/yuruyuri.jpg'
                             }
                         ]
                     });
@@ -177,12 +172,70 @@
                         music: data
                     });
                 }
+                setListener()
+//                ap.on('play',play())
             },
             error: function (e) {
             }
         });
+        WebSocketTest();
 
     }
+
+    //设置监听器
+    function setListener() {
+        //暂停时
+        ap.on("pause",function () {
+            console.log("pause")
+        })
+        //播放时
+        ap.on("play",function () {
+            console.log("play")
+        })
+        //缓存完成可以播放时
+        ap.on("canplay",function () {
+            console.log("canplay")
+        })
+        //播放结束时
+        ap.on("ended",function () {
+            console.log("ended")
+        })
+        //播放错误时
+        ap.on("error",function () {
+            console.log("error")
+        })
+        //正在播放时
+        ap.on("playing",function () {
+            console.log("playing")
+        })
+    }
+
+
+    function WebSocketTest() {
+        if ("WebSocket" in window) {
+            alert("您的浏览器支持 WebSocket!");
+            // 打开一个 web socket
+            ws = new WebSocket("ws://localhost:8080/Listen/sync");
+            ws.onopen = function () {
+                ws.send("connect_success!");
+                alert("数据发送中...");
+            };
+            ws.onmessage = function (evt) {
+                var received_msg = evt.data;
+                alert("数据已接收...");
+            };
+            ws.onclose = function () {
+                // 关闭 websocket
+                alert("连接已关闭...");
+            };
+        }
+        else {
+            // 浏览器不支持 WebSocket
+            swal("OMG", "浏览器不支持Websocket!", "error");
+        }
+    }
     var ap = null;
+
+
 </script>
 </html>

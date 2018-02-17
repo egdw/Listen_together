@@ -21,18 +21,26 @@ public class MessageSocket {
 
     @OnOpen
     public void onOpen(Session session) throws IOException {
+        System.out.println("连接上线:" + session);
         this.session = session;
         Constants.users.put(session, null);
+        System.out.println(Constants.users.size());
     }
 
     @OnClose
     public void onClose() throws IOException {
+        System.out.println("连接关闭");
         Constants.users.remove(this.session);
+        System.out.println(Constants.users.size());
     }
 
     @OnMessage
     public void onMessage(String message, Session session) throws IOException {
         System.out.println(message);
+    }
+
+    public void sendMessage(String message) throws IOException {
+        this.session.getBasicRemote().sendText(message);
     }
 
 }
