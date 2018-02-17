@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Implementation-Title: listen Maven Webapp
+Implementation-Version: 1.0
+Built-By: hdy
+Implementation-Vendor-Id: im.hdy
+Created-By: Apache Maven 3.3.9
+Build-Jdk: 1.8.0_112
+Implementation-Vendor: Pivotal Software, Inc.
+Main-Class: im.hdy.Start
+
