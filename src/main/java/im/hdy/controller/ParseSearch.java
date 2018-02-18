@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpSession;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 
@@ -19,15 +20,16 @@ import java.util.ArrayList;
 public class ParseSearch {
 
     @RequestMapping("/parse")
-    public String parse(@RequestParam(required = true) String id) {
-//        ArrayList<Music> arrays = new ArrayList<>();
+    public String parse(@RequestParam(required = true) String id, HttpSession session) {
         Music music = MusicUtils.get(10, id);
         music.setSongid(null);
         music.setType(null);
         music.setLink(null);
         music.setLrc(null);
-        Constants.musics.add(music);
-//        arrays.add(music);
-        return JSON.toJSONString(Constants.musics);
+        String id1 = (String) session.getAttribute("id");
+        if (id1 != null) {
+            Constants.addMusic(id1, music);
+        }
+        return JSON.toJSONString(Constants.getMusicList(id1));
     }
 }
