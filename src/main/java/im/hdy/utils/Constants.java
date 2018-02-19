@@ -1,13 +1,14 @@
 package im.hdy.utils;
 
+import com.alibaba.fastjson.JSON;
+import im.hdy.model.ClientMessage;
+import im.hdy.model.Message;
 import im.hdy.model.Music;
 import org.springframework.stereotype.Component;
 
 import javax.websocket.Session;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * Created by hdy on 17/02/2018.
@@ -16,8 +17,82 @@ import java.util.Map;
 public class Constants {
     //    public static ArrayList<Music> musics = new ArrayList<>();
     public static Map<String, ArrayList<Music>> musics = new HashMap<>();
-    //    public static Map<Session, String> users = new HashMap<>();
+    //    public static Map<Session, String> sessionUsers = new HashMap<>();
     public static Map<String, LinkedList<Session>> users = new HashMap<>();
+    //需要同步的数据
+    public static Map<Session, LinkedList<Session>> syncs = new HashMap<>();
+
+
+    /**
+     * 添加同步
+     *
+     * @param master 目标房主
+     * @param from   来自哪里
+     */
+    public static void addSync(Session master, Session from) {
+        LinkedList<Session> sessions = syncs.get(master);
+        if (sessions == null) {
+            sessions = new LinkedList<>();
+        }
+        sessions.add(from);
+        syncs.put(master, sessions);
+
+    }
+
+    public static void sendSyncMessage(Session master, String message) {
+        LinkedList<Session> sessions = syncs.get(master);
+        System.out.println(sessions);
+        if (sessions != null) {
+            Iterator<Session> iterator = sessions.iterator();
+            while (iterator.hasNext()) {
+                Session session = iterator.next();
+                ClientMessage clientMessage = JSON.parseObject(message, ClientMessage.class);
+                System.out.println("接收到的房主的信息:"+clientMessage);
+                Message serverMessage = new Message(2, false, clientMessage.getIndex(), clientMessage.getTime(), clientMessage.getAction(), clientMessage.getTimestamp());
+                System.out.println("发送服务器的信息" + serverMessage);
+                try {
+                    session.getBasicRemote().sendText(JSON.toJSONString(serverMessage));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            sessions.clear();
+            syncs.put(master, sessions);
+        }
+    }
+
+    /**
+     * 获取相应房间的房主
+     *
+     * @param key 房间名
+     * @return session对象
+     */
+    public static Session getRoomMaster(String key) {
+        LinkedList<Session> sessions = users.get(key);
+        return sessions.getFirst();
+    }
+
+    /**
+     * 判断是否是房主
+     */
+    public static boolean isRoomMaster(String key, Session session) {
+        LinkedList<Session> sessions = users.get(key);
+        if (session.equals(sessions.getFirst())) {
+            //说明是房主
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 获取房间内的用户
+     *
+     * @param key
+     */
+    public static Session getRoomFirstUsers(String key) {
+        LinkedList<Session> sessions = users.get(key);
+        return sessions.getFirst();
+    }
 
     /**
      * 添加用户

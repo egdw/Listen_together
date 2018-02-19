@@ -65,6 +65,7 @@
 
     var curr_page = 1;
     var ws = null;
+    var str = null;
     function changePage1() {
         if (curr_page > 1) {
             curr_page = curr_page - 1;
@@ -214,9 +215,9 @@
 
     function WebSocketTest() {
         if ("WebSocket" in window) {
-            alert("您的浏览器支持 WebSocket!");
+//            alert("您的浏览器支持 WebSocket!");
             // 打开一个 web socket
-            ws = new WebSocket("ws://localhost:8080/Listen/sync");
+            ws = new WebSocket("ws://192.168.123.2:8080/Listen/sync");
 //            {
 //                "type":"0"
 //                "id":"123"
@@ -226,19 +227,64 @@
 //                "action":"pause"
 //            }
             ws.onopen = function () {
-                var str = location.href;
-                var str = str.substring(str.lastIndexOf("/") + 1);
+                str = location.href;
+                str = str.substring(str.lastIndexOf("/") + 1);
                 console.log(str);
-                ws.send("{'type':'0','id':'" + str + "','index':'0','time':'0','canplay':'true','action':'none'}");
-                alert("数据发送中...");
+                var timestamp = (new Date()).valueOf();
+                ws.send("{'type':'0','id':'" + str + "','index':'0','time':'0','canplay':'true','action':'-1','timestamp':'" + timestamp + "'}");
+//                alert("数据发送中...");
             };
             ws.onmessage = function (evt) {
                 var received_msg = evt.data;
-                alert("数据已接收...");
-            };
+                console.log(received_msg)
+                var json = JSON.parse(received_msg);
+                //服务器同步请求
+                if (json.type == 1) {
+                    //判断当前是否暂停
+                    var pause = ap.audio.paused
+                    //获取当前的时间
+                    var currentTime = ap.audio.currentTime
+                    //获取当前的播放进度
+                    var palyIndex = ap.playIndex
+                    var timestamp = (new Date()).valueOf();
+                    console.log(pause)
+                    console.log(currentTime)
+                    console.log(palyIndex)
+                    if (pause == true) {
+                        ws.send("{'type':'1','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 1 + "','timestamp':'" + timestamp + "'}");
+                    } else {
+                        ws.send("{'type':'1','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 0 + "','timestamp':'" + timestamp + "'}");
+                    }
+                } else if (json.type == 2) {
+                    //接受服务器返回的房主的状态
+                    var index = json.index
+                    var time = parseFloat(json.time)
+                    console.log("之前的播放时间:"+time)
+                    //当前的时间戳
+                    var c_timestamp = parseFloat((new Date()).valueOf());
+                    //发送时候的时间戳
+                    var timestamp = parseFloat(json.timestamp)
+                    //经过网络传输之后花费了多长的时间
+                    var space_timestamp = parseFloat((c_timestamp - timestamp) / 1000);
+                    console.log("时间戳减"+space_timestamp)
+                    time = parseFloat(time + space_timestamp);
+                    console.log("当前播放时间:"+time)
+                    var status = json.status
+                    ap.setMusic(index)
+                    ap.play(time)
+                    if (status == 0) {
+                        //播放状态
+                    } else if (status == 1) {
+                        //暂停状态
+                        ap.pause()
+                    }
+                }
+
+//                alert("数据已接收...");
+            }
             ws.onclose = function () {
                 // 关闭 websocket
-                alert("连接已关闭...");
+//                alert("连接已关闭...");
             };
         }
         else {
@@ -247,7 +293,16 @@
         }
     }
     var ap = null;
-
+    function timetrans(date) {
+        var date = new Date(date * 1000);//如果date为13位不需要乘1000
+        var Y = date.getFullYear() + '-';
+        var M = (date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '-';
+        var D = (date.getDate() < 10 ? '0' + (date.getDate()) : date.getDate()) + ' ';
+        var h = (date.getHours() < 10 ? '0' + date.getHours() : date.getHours()) + ':';
+        var m = (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()) + ':';
+        var s = (date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getSeconds());
+        return Y + M + D + h + m + s;
+    }
 
 </script>
 </html>
