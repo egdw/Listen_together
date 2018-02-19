@@ -66,6 +66,9 @@
     var curr_page = 1;
     var ws = null;
     var str = null;
+    var ap = null;
+    //用于暂时屏蔽暂停播放触发的标记
+    var flag = true
     function changePage1() {
         if (curr_page > 1) {
             curr_page = curr_page - 1;
@@ -189,10 +192,26 @@
         //暂停时
         ap.on("pause", function () {
             console.log("pause")
+            if (flag) {
+                //获取当前的时间
+                var currentTime = ap.audio.currentTime
+                //获取当前的播放进度
+                var palyIndex = ap.playIndex
+                var timestamp = (new Date()).valueOf();
+                ws.send("{'type':'2','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 0 + "','timestamp':'" + timestamp + "'}");
+            }
         })
         //播放时
         ap.on("play", function () {
             console.log("play")
+            if (flag) {
+                //获取当前的时间
+                var currentTime = ap.audio.currentTime
+                //获取当前的播放进度
+                var palyIndex = ap.playIndex
+                var timestamp = (new Date()).valueOf();
+                ws.send("{'type':'2','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 1 + "','timestamp':'" + timestamp + "'}");
+            }
         })
         //缓存完成可以播放时
         ap.on("canplay", function () {
@@ -207,9 +226,9 @@
             console.log("error")
         })
         //正在播放时
-        ap.on("playing", function () {
-            console.log("playing")
-        })
+//        ap.on("playing", function () {
+//            console.log("playing")
+//        })
     }
 
 
@@ -218,14 +237,6 @@
 //            alert("您的浏览器支持 WebSocket!");
             // 打开一个 web socket
             ws = new WebSocket("ws://192.168.123.2:8080/Listen/sync");
-//            {
-//                "type":"0"
-//                "id":"123"
-//                "index":"0"
-//                "time":"213123"
-//                "canplay":"true"
-//                "action":"pause"
-//            }
             ws.onopen = function () {
                 str = location.href;
                 str = str.substring(str.lastIndexOf("/") + 1);
@@ -247,9 +258,6 @@
                     //获取当前的播放进度
                     var palyIndex = ap.playIndex
                     var timestamp = (new Date()).valueOf();
-                    console.log(pause)
-                    console.log(currentTime)
-                    console.log(palyIndex)
                     if (pause == true) {
                         ws.send("{'type':'1','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 1 + "','timestamp':'" + timestamp + "'}");
                     } else {
@@ -259,18 +267,19 @@
                     //接受服务器返回的房主的状态
                     var index = json.index
                     var time = parseFloat(json.time)
-                    console.log("之前的播放时间:"+time)
+                    console.log("之前的播放时间:" + time)
                     //当前的时间戳
                     var c_timestamp = parseFloat((new Date()).valueOf());
                     //发送时候的时间戳
                     var timestamp = parseFloat(json.timestamp)
                     //经过网络传输之后花费了多长的时间
                     var space_timestamp = parseFloat((c_timestamp - timestamp) / 1000);
-                    console.log("时间戳减"+space_timestamp)
+                    console.log("时间戳减" + space_timestamp)
                     time = parseFloat(time + space_timestamp);
-                    console.log("当前播放时间:"+time)
+                    console.log("当前播放时间:" + time)
                     var status = json.status
                     ap.setMusic(index)
+                    flag = false;
                     ap.play(time)
                     if (status == 0) {
                         //播放状态
@@ -278,6 +287,38 @@
                         //暂停状态
                         ap.pause()
                     }
+                    flag = true;
+                } else if (json.type == 3) {
+                    //接受服务器返回的状态.比如暂停.播放等.
+                    //0 播放
+                    //1 暂停
+                    //2 缓存完成
+                    var index = json.index
+                    var time = parseFloat(json.time)
+                    console.log("之前的播放时间:" + time)
+                    //当前的时间戳
+                    var c_timestamp = parseFloat((new Date()).valueOf());
+                    //发送时候的时间戳
+                    var timestamp = parseFloat(json.timestamp)
+                    //经过网络传输之后花费了多长的时间
+                    var space_timestamp = parseFloat((c_timestamp - timestamp) / 1000);
+                    console.log("时间戳减" + space_timestamp)
+                    time = parseFloat(time + space_timestamp );
+                    console.log("当前播放时间:" + time)
+                    var status = json.status
+                    if (ap.playIndex != index) {
+                        ap.setMusic(index)
+                    }
+                    flag = false;
+                    if (json.status == 0) {
+                        ap.pause()
+                    } else if (json.status = 1) {
+                        ap.play(time)
+                    } else {
+
+                    }
+                    flag = true;
+
                 }
 
 //                alert("数据已接收...");
@@ -292,17 +333,7 @@
             swal("OMG", "浏览器不支持Websocket!", "error");
         }
     }
-    var ap = null;
-    function timetrans(date) {
-        var date = new Date(date * 1000);//如果date为13位不需要乘1000
-        var Y = date.getFullYear() + '-';
-        var M = (date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '-';
-        var D = (date.getDate() < 10 ? '0' + (date.getDate()) : date.getDate()) + ' ';
-        var h = (date.getHours() < 10 ? '0' + date.getHours() : date.getHours()) + ':';
-        var m = (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()) + ':';
-        var s = (date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getSeconds());
-        return Y + M + D + h + m + s;
-    }
+
 
 </script>
 </html>

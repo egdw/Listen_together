@@ -39,15 +39,20 @@ public class Constants {
 
     }
 
+    /**
+     * 给每一个等待同步的用户发送过去
+     *
+     * @param master
+     * @param message
+     */
     public static void sendSyncMessage(Session master, String message) {
         LinkedList<Session> sessions = syncs.get(master);
-        System.out.println(sessions);
         if (sessions != null) {
+            ClientMessage clientMessage = JSON.parseObject(message, ClientMessage.class);
             Iterator<Session> iterator = sessions.iterator();
             while (iterator.hasNext()) {
                 Session session = iterator.next();
-                ClientMessage clientMessage = JSON.parseObject(message, ClientMessage.class);
-                System.out.println("接收到的房主的信息:"+clientMessage);
+                System.out.println("接收到的房主的信息:" + clientMessage);
                 Message serverMessage = new Message(2, false, clientMessage.getIndex(), clientMessage.getTime(), clientMessage.getAction(), clientMessage.getTimestamp());
                 System.out.println("发送服务器的信息" + serverMessage);
                 try {
@@ -58,6 +63,27 @@ public class Constants {
             }
             sessions.clear();
             syncs.put(master, sessions);
+        }
+    }
+
+    /**
+     * 向频道里的所有session发送状态
+     */
+    public static void sendStatus(String key, String message,Session self) {
+        LinkedList<Session> sessions = users.get(key);
+        Iterator<Session> iterator = sessions.iterator();
+        ClientMessage clientMessage = JSON.parseObject(message, ClientMessage.class);
+        Message serverMessage = new Message(3, false, clientMessage.getIndex(), clientMessage.getTime(), clientMessage.getAction(), clientMessage.getTimestamp());
+        String jsonString = JSON.toJSONString(serverMessage);
+        while (iterator.hasNext()) {
+            Session session = iterator.next();
+            try {
+                if(!self.equals(session)){
+                    session.getBasicRemote().sendText(jsonString);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

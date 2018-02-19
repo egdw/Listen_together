@@ -97,6 +97,10 @@ public class MessageSocket {
                 //然后回传到其他的用户的时候.计算中间的延时.降低延时.
                 Constants.sendSyncMessage(session, message);
                 break;
+            case 2:
+                //各种状态操作时
+                Constants.sendStatus(this.id, message,session);
+                break;
             default:
                 break;
         }
