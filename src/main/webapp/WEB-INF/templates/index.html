@@ -71,6 +71,10 @@
     //用于暂时屏蔽暂停播放触发的标记
     var flag = true
     var flag2 = true;
+    var lasttime = null;
+    var last_pause_time = null;
+    var last_play_time = null;
+    var last_sync = null;
     function changePage1() {
         if (curr_page > 1) {
             curr_page = curr_page - 1;
@@ -105,7 +109,7 @@
                     showlrc: false,
                     mutex: true,
                     theme: '#ad7a86',
-                    mode: 'random',
+                    mode: 'circulation',
                     music: data
                 });
                 swal("Good!", "添加成功!", "success");
@@ -157,7 +161,7 @@
                         showlrc: false,
                         mutex: true,
                         theme: '#ad7a86',
-                        mode: 'random',
+                        mode: 'circulation',
                         music: [
                             {
                                 title: 'あっちゅ～ま青春!',
@@ -175,7 +179,7 @@
                         showlrc: false,
                         mutex: true,
                         theme: '#ad7a86',
-                        mode: 'random',
+                        mode: 'circulation',
                         music: data
                     });
                 }
@@ -200,7 +204,15 @@
                 //获取当前的播放进度
                 var palyIndex = ap.playIndex
                 var timestamp = (new Date()).valueOf();
-                ws.send("{'type':'2','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 0 + "','timestamp':'" + timestamp + "'}");
+                if (last_pause_time == null) {
+                    last_pause_time = currentTime;
+                    ws.send("{'type':'2','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 0 + "','timestamp':'" + timestamp + "'}");
+                } else {
+                    if (last_pause_time != currentTime) {
+                        ws.send("{'type':'2','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 0 + "','timestamp':'" + timestamp + "'}");
+                        last_pause_time = currentTime;
+                    }
+                }
             }
         })
         //播放时
@@ -212,7 +224,15 @@
                 //获取当前的播放进度
                 var palyIndex = ap.playIndex
                 var timestamp = (new Date()).valueOf();
-                ws.send("{'type':'2','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 1 + "','timestamp':'" + timestamp + "'}");
+                if (last_play_time == null) {
+                    ws.send("{'type':'2','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 1 + "','timestamp':'" + timestamp + "'}");
+                    last_play_time = currentTime;
+                } else {
+                    if (last_play_time == currentTime && ((parseFloat(last_play_time) - parseFloat(currentTime) < -0.1 || parseFloat(last_play_time) - parseFloat(currentTime)) > 0.1)) {
+                        ws.send("{'type':'2','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 1 + "','timestamp':'" + timestamp + "'}");
+                        last_play_time = currentTime;
+                    }
+                }
             }
         })
         //缓存完成可以播放时
@@ -220,6 +240,7 @@
             //由于无法监听到拖动时间.只能够通过影响效率的方式.每次如果调用了canplay就发送当前的进度
             console.log("canplay")
             if (flag && flag2) {
+
                 flag = false;
                 var pause = ap.audio.paused
                 //获取当前的时间
@@ -230,7 +251,17 @@
                 console.log(pause)
                 console.log(currentTime)
                 console.log(palyIndex)
-                ws.send("{'type':'3','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 1 + "','timestamp':'" + timestamp + "'}");
+                if (lasttime == null) {
+                    ws.send("{'type':'3','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 1 + "','timestamp':'" + timestamp + "'}");
+                    lasttime = currentTime;
+                } else {
+                    if (lasttime != currentTime && ((parseFloat(lasttime) - parseFloat(currentTime) < -0.1 || parseFloat(lasttime) - parseFloat(currentTime)) > 0.1)) {
+                        ws.send("{'type':'3','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 1 + "','timestamp':'" + timestamp + "'}");
+                        lasttime = currentTime;
+                        //如果不相等
+                    }
+                }
+
                 flag = true;
             }
         })
@@ -275,27 +306,41 @@
                     //获取当前的播放进度
                     var palyIndex = ap.playIndex
                     var timestamp = (new Date()).valueOf();
-                    if (pause == true) {
+                    if (pause) {
                         ws.send("{'type':'1','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 1 + "','timestamp':'" + timestamp + "'}");
                     } else {
                         ws.send("{'type':'1','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 0 + "','timestamp':'" + timestamp + "'}");
                     }
+//                    if (last_sync == null) {
+//                        if (pause) {
+//                            ws.send("{'type':'1','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 1 + "','timestamp':'" + timestamp + "'}");
+//                        } else {
+//                            ws.send("{'type':'1','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 0 + "','timestamp':'" + timestamp + "'}");
+//                        }
+//                        last_sync = currentTime;
+//                    } else {
+//                        if (last_sync != currentTime && ((parseFloat(last_sync) - parseFloat(currentTime) < -0.1 || parseFloat(last_sync) - parseFloat(currentTime)) > 0.1)) {
+//                            if (pause) {
+//                                ws.send("{'type':'1','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 1 + "','timestamp':'" + timestamp + "'}");
+//                            } else {
+//                                ws.send("{'type':'1','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 0 + "','timestamp':'" + timestamp + "'}");
+//                            }
+//                            last_sync = currentTime;
+//                        }
+//                    }
                 } else if (json.type == 2) {
                     //接受服务器返回的房主的状态
                     var pause = ap.audio.paused
                     var index = json.index
                     var currentTime = ap.audio.currentTime
                     var time = parseFloat(json.time)
-                    console.log("之前的播放时间:" + time)
                     //当前的时间戳
                     var c_timestamp = parseFloat((new Date()).valueOf());
                     //发送时候的时间戳
                     var timestamp = parseFloat(json.timestamp)
                     //经过网络传输之后花费了多长的时间
                     var space_timestamp = parseFloat((c_timestamp - timestamp) / 1000);
-                    console.log("时间戳减" + space_timestamp)
                     time = parseFloat(time + space_timestamp);
-                    console.log("当前播放时间:" + time)
                     var status = json.status
                     flag = false;
                     ap.setMusic(index)
@@ -308,7 +353,8 @@
                     //0 播放
                     //1 暂停
                     //2 缓存完成
-                    if(flag2){
+                    if (flag2) {
+                        flag2 = false;
                         var pause = ap.audio.paused
                         var index = json.index
                         var time = parseFloat(json.time)
@@ -325,22 +371,28 @@
                         if (ap.playIndex != index) {
                             ap.setMusic(index)
                         }
-                        if (json.status == 0) {
-                            if (pause) {
-                            }else{
-                                ap.pause()
-                            }
-                        } else if (json.status = 1) {
+//                        if (json.status == 0) {
+//                            if (pause) {
+//                            } else {
+//                                ap.pause()
+//                            }
+//                        } else if (json.status = 1) {
+//                            if (currentTime - time < -0.1 || currentTime - time > 0.1) {
+//                                ap.play(time)
+//                            }
+//                        }
+                        if (json.status = 1) {
                             if (currentTime - time < -0.1 || currentTime - time > 0.1) {
                                 ap.play(time)
                             }
                         }
                         flag = true;
+                        flag2 = true;
                     }
                 } else {
                     //type = 4
                     //接受服务器的歌曲改变和拖动时间改变
-                    if(flag2) {
+                    if (flag2) {
                         flag2 = false;
                         var index = json.index
                         var time = parseFloat(json.time)
