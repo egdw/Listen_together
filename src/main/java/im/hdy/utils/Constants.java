@@ -69,16 +69,16 @@ public class Constants {
     /**
      * 向频道里的所有session发送状态
      */
-    public static void sendStatus(String key, String message,Session self) {
+    public static void sendStatus(String key, String message, Session self, Integer type) {
         LinkedList<Session> sessions = users.get(key);
         Iterator<Session> iterator = sessions.iterator();
         ClientMessage clientMessage = JSON.parseObject(message, ClientMessage.class);
-        Message serverMessage = new Message(3, false, clientMessage.getIndex(), clientMessage.getTime(), clientMessage.getAction(), clientMessage.getTimestamp());
+        Message serverMessage = new Message(type, false, clientMessage.getIndex(), clientMessage.getTime(), clientMessage.getAction(), clientMessage.getTimestamp());
         String jsonString = JSON.toJSONString(serverMessage);
         while (iterator.hasNext()) {
             Session session = iterator.next();
             try {
-                if(!self.equals(session)){
+                if (!self.equals(session)) {
                     session.getBasicRemote().sendText(jsonString);
                 }
             } catch (IOException e) {

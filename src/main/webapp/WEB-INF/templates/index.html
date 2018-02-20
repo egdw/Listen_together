@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="//g.alicdn.com/msui/sm/0.6.2/css/sm.min.css">
     <link rel="stylesheet" href="//g.alicdn.com/msui/sm/0.6.2/css/sm-extend.min.css">
     <script src="https://cdn.bootcss.com/aplayer/1.6.0/APlayer.min.js"></script>
+
     <script type='text/javascript' src='//g.alicdn.com/sj/lib/zepto/zepto.min.js' charset='utf-8'></script>
     <script type='text/javascript' src='//g.alicdn.com/msui/sm/0.6.2/js/sm.min.js' charset='utf-8'></script>
     <script type='text/javascript' src='//g.alicdn.com/msui/sm/0.6.2/js/sm-extend.min.js' charset='utf-8'></script>
@@ -69,6 +70,7 @@
     var ap = null;
     //用于暂时屏蔽暂停播放触发的标记
     var flag = true
+    var flag2 = true;
     function changePage1() {
         if (curr_page > 1) {
             curr_page = curr_page - 1;
@@ -192,7 +194,7 @@
         //暂停时
         ap.on("pause", function () {
             console.log("pause")
-            if (flag) {
+            if (flag && flag2) {
                 //获取当前的时间
                 var currentTime = ap.audio.currentTime
                 //获取当前的播放进度
@@ -204,7 +206,7 @@
         //播放时
         ap.on("play", function () {
             console.log("play")
-            if (flag) {
+            if (flag && flag2) {
                 //获取当前的时间
                 var currentTime = ap.audio.currentTime
                 //获取当前的播放进度
@@ -215,7 +217,22 @@
         })
         //缓存完成可以播放时
         ap.on("canplay", function () {
+            //由于无法监听到拖动时间.只能够通过影响效率的方式.每次如果调用了canplay就发送当前的进度
             console.log("canplay")
+            if (flag && flag2) {
+                flag = false;
+                var pause = ap.audio.paused
+                //获取当前的时间
+                var currentTime = ap.audio.currentTime
+                //获取当前的播放进度
+                var palyIndex = ap.playIndex
+                var timestamp = (new Date()).valueOf();
+                console.log(pause)
+                console.log(currentTime)
+                console.log(palyIndex)
+                ws.send("{'type':'3','id':'" + str + "','index':'" + palyIndex + "','time':'" + currentTime + "','canplay':'true','action':'" + 1 + "','timestamp':'" + timestamp + "'}");
+                flag = true;
+            }
         })
         //播放结束时
         ap.on("ended", function () {
@@ -265,7 +282,9 @@
                     }
                 } else if (json.type == 2) {
                     //接受服务器返回的房主的状态
+                    var pause = ap.audio.paused
                     var index = json.index
+                    var currentTime = ap.audio.currentTime
                     var time = parseFloat(json.time)
                     console.log("之前的播放时间:" + time)
                     //当前的时间戳
@@ -278,14 +297,10 @@
                     time = parseFloat(time + space_timestamp);
                     console.log("当前播放时间:" + time)
                     var status = json.status
-                    ap.setMusic(index)
                     flag = false;
-                    ap.play(time)
-                    if (status == 0) {
-                        //播放状态
-                    } else if (status == 1) {
-                        //暂停状态
-                        ap.pause()
+                    ap.setMusic(index)
+                    if (currentTime - time < -0.1 || currentTime - time > 0.1) {
+                        ap.play(time)
                     }
                     flag = true;
                 } else if (json.type == 3) {
@@ -293,38 +308,68 @@
                     //0 播放
                     //1 暂停
                     //2 缓存完成
-                    var index = json.index
-                    var time = parseFloat(json.time)
-                    console.log("之前的播放时间:" + time)
-                    //当前的时间戳
-                    var c_timestamp = parseFloat((new Date()).valueOf());
-                    //发送时候的时间戳
-                    var timestamp = parseFloat(json.timestamp)
-                    //经过网络传输之后花费了多长的时间
-                    var space_timestamp = parseFloat((c_timestamp - timestamp) / 1000);
-                    console.log("时间戳减" + space_timestamp)
-                    time = parseFloat(time + space_timestamp );
-                    console.log("当前播放时间:" + time)
-                    var status = json.status
-                    if (ap.playIndex != index) {
-                        ap.setMusic(index)
+                    if(flag2){
+                        var pause = ap.audio.paused
+                        var index = json.index
+                        var time = parseFloat(json.time)
+                        var currentTime = ap.audio.currentTime
+                        //当前的时间戳
+                        var c_timestamp = parseFloat((new Date()).valueOf());
+                        //发送时候的时间戳
+                        var timestamp = parseFloat(json.timestamp)
+                        //经过网络传输之后花费了多长的时间
+                        var space_timestamp = parseFloat((c_timestamp - timestamp) / 1000);
+                        time = parseFloat(time + space_timestamp);
+                        var status = json.status
+                        flag = false;
+                        if (ap.playIndex != index) {
+                            ap.setMusic(index)
+                        }
+                        if (json.status == 0) {
+                            if (pause) {
+                            }else{
+                                ap.pause()
+                            }
+                        } else if (json.status = 1) {
+                            if (currentTime - time < -0.1 || currentTime - time > 0.1) {
+                                ap.play(time)
+                            }
+                        }
+                        flag = true;
                     }
-                    flag = false;
-                    if (json.status == 0) {
-                        ap.pause()
-                    } else if (json.status = 1) {
-                        ap.play(time)
-                    } else {
-
+                } else {
+                    //type = 4
+                    //接受服务器的歌曲改变和拖动时间改变
+                    if(flag2) {
+                        flag2 = false;
+                        var index = json.index
+                        var time = parseFloat(json.time)
+                        var currentTime = ap.audio.currentTime
+                        //当前的时间戳
+                        var c_timestamp = parseFloat((new Date()).valueOf());
+                        //发送时候的时间戳
+                        var timestamp = parseFloat(json.timestamp)
+                        //经过网络传输之后花费了多长的时间
+                        var space_timestamp = parseFloat((c_timestamp - timestamp) / 1000);
+                        time = parseFloat(time + space_timestamp);
+                        var status = json.status
+                        flag = false;
+                        if (ap.playIndex != index) {
+                            ap.setMusic(index)
+                        }
+                        if (currentTime - time < -0.1 || currentTime - time > 0.1) {
+                            ap.play(time)
+                        }
                     }
                     flag = true;
-
+                    flag2 = true;
                 }
 
 //                alert("数据已接收...");
             }
             ws.onclose = function () {
                 // 关闭 websocket
+                swal("OMG", "与服务器连接中断!", "error");
 //                alert("连接已关闭...");
             };
         }
@@ -333,7 +378,6 @@
             swal("OMG", "浏览器不支持Websocket!", "error");
         }
     }
-
 
 </script>
 </html>

@@ -99,7 +99,11 @@ public class MessageSocket {
                 break;
             case 2:
                 //各种状态操作时
-                Constants.sendStatus(this.id, message,session);
+                Constants.sendStatus(this.id, message,session,3);
+                break;
+            case 3:
+                //拖动进度条.改变歌曲播放时
+                Constants.sendStatus(this.id, message,session,4);
                 break;
             default:
                 break;
