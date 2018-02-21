@@ -15,11 +15,11 @@ import java.io.IOException;
 
 /**
  * Created by hdy on 17/02/2018.
- * 用于自定义歌曲搜索
+ * 用于表单的播放
  */
-@ServerEndpoint("/sync")
+@ServerEndpoint("/sync2")
 @Component
-public class MessageSocket {
+public class MessageSocket2 {
 
     private Session session;
     private String id;

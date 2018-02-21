@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpSession;
 import javax.websocket.Session;
+import java.util.Map;
 
 /**
  * Created by hdy on 17/02/2018.
@@ -28,4 +29,11 @@ public class IndexController {
         return "index";
     }
 
+    @RequestMapping(value = "/{id}/{type}/{list_id}", method = RequestMethod.GET)
+    public String create_playlist(@PathVariable() String id, @PathVariable()String type, @PathVariable()String list_id, HttpSession session) {
+        session.setAttribute("id", id);
+        session.setAttribute("type", type);
+        session.setAttribute("list_id", list_id);
+        return "index2";
+    }
 }
